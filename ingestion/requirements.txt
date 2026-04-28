@@ -6,3 +6,4 @@ voyageai==0.3.2
 pinecone==5.4.2
 python-dotenv==1.0.1
 pytest==8.3.4
+pytest-mock==3.14.0
