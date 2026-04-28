@@ -5,8 +5,12 @@ from schema import ChunkMetadata, GoverningBody
 def test_governing_body_values_are_stable():
     assert GoverningBody.DYB.value == "DYB"
     assert GoverningBody.DYS.value == "DYS"
-    assert GoverningBody.NFHS_BASEBALL.value == "NFHS_BASEBALL"
+    assert GoverningBody.OBR.value == "OBR"
     assert GoverningBody.NFHS_SOFTBALL.value == "NFHS_SOFTBALL"
+
+
+def test_governing_body_has_no_nfhs_baseball():
+    assert not hasattr(GoverningBody, "NFHS_BASEBALL")
 
 
 def test_chunk_metadata_to_pinecone_roundtrip():
@@ -34,10 +38,10 @@ def test_chunk_metadata_to_pinecone_roundtrip():
 
 def test_chunk_metadata_optional_fields_default_to_none():
     chunk = ChunkMetadata(
-        id="nfhs-baseball-2026-unknown-0",
+        id="nfhs-softball-2026-unknown-0",
         text="Some rule text.",
-        source_doc="2026-NFHS-Baseball",
-        governing_body=GoverningBody.NFHS_BASEBALL,
+        source_doc="2026-NFHS-Softball",
+        governing_body=GoverningBody.NFHS_SOFTBALL,
         year=2026,
     )
     pinecone_meta = chunk.to_pinecone_metadata()

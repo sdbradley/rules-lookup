@@ -4,10 +4,10 @@ from typing import Any
 
 
 class GoverningBody(str, Enum):
-    DYB = "DYB"
-    DYS = "DYS"
-    NFHS_BASEBALL = "NFHS_BASEBALL"
-    NFHS_SOFTBALL = "NFHS_SOFTBALL"
+    DYB = "DYB"                      # Diamond Youth Baseball (OBR-based)
+    DYS = "DYS"                      # Diamond Youth Softball (NFHS Softball-based)
+    OBR = "OBR"                      # Official Baseball Rules (MLB / base for DYB)
+    NFHS_SOFTBALL = "NFHS_SOFTBALL"  # NFHS Softball (base rules for DYS)
 
 
 # Pinecone index config — kept here so ingestion and query layers stay in sync
