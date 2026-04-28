@@ -4,6 +4,7 @@ llama-index-core==0.12.6
 llama-index-readers-file==0.4.5
 voyageai==0.3.2
 pinecone==5.4.2
+anthropic==0.40.0
 python-dotenv==1.0.1
 pytest==8.3.4
 pytest-mock==3.14.0
