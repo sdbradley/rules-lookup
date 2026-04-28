@@ -1,0 +1,15 @@
+services:
+  ingestion:
+    build: ./ingestion
+    volumes:
+      - ./pdfs:/app/pdfs
+      - ./output:/app/output
+    env_file:
+      - .env
+
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env

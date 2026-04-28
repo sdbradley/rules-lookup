@@ -1,0 +1,7 @@
+pdfplumber==0.11.4
+pymupdf==1.24.14
+llama-index-core==0.12.6
+llama-index-readers-file==0.4.5
+voyageai==0.3.2
+pinecone==5.4.2
+python-dotenv==1.0.1
