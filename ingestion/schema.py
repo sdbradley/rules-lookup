@@ -28,13 +28,17 @@ class ChunkMetadata:
     chunk_index: int = 0
 
     def to_pinecone_metadata(self) -> dict[str, Any]:
-        return {
+        meta: dict[str, Any] = {
             "text": self.text,
             "source_doc": self.source_doc,
             "governing_body": self.governing_body.value,
             "year": self.year,
-            "rule_number": self.rule_number,
-            "section_title": self.section_title,
-            "page_number": self.page_number,
             "chunk_index": self.chunk_index,
         }
+        if self.rule_number is not None:
+            meta["rule_number"] = self.rule_number
+        if self.section_title is not None:
+            meta["section_title"] = self.section_title
+        if self.page_number is not None:
+            meta["page_number"] = self.page_number
+        return meta

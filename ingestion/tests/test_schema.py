@@ -36,7 +36,7 @@ def test_chunk_metadata_to_pinecone_roundtrip():
     assert pinecone_meta["chunk_index"] == 0
 
 
-def test_chunk_metadata_optional_fields_default_to_none():
+def test_chunk_metadata_optional_fields_omitted_when_none():
     chunk = ChunkMetadata(
         id="nfhs-softball-2026-unknown-0",
         text="Some rule text.",
@@ -46,13 +46,13 @@ def test_chunk_metadata_optional_fields_default_to_none():
     )
     pinecone_meta = chunk.to_pinecone_metadata()
 
-    assert pinecone_meta["rule_number"] is None
-    assert pinecone_meta["section_title"] is None
-    assert pinecone_meta["page_number"] is None
+    assert "rule_number" not in pinecone_meta
+    assert "section_title" not in pinecone_meta
+    assert "page_number" not in pinecone_meta
     assert pinecone_meta["chunk_index"] == 0
 
 
-def test_pinecone_metadata_has_no_extra_keys():
+def test_pinecone_metadata_includes_optional_fields_when_set():
     chunk = ChunkMetadata(
         id="dys-2026-2.04-0",
         text="Players shall be considered property of the league.",
@@ -60,12 +60,13 @@ def test_pinecone_metadata_has_no_extra_keys():
         governing_body=GoverningBody.DYS,
         year=2026,
         rule_number="2.04",
+        section_title="Player Eligibility",
+        page_number=10,
     )
-    expected_keys = {
-        "text", "source_doc", "governing_body", "year",
-        "rule_number", "section_title", "page_number", "chunk_index",
-    }
-    assert set(chunk.to_pinecone_metadata().keys()) == expected_keys
+    meta = chunk.to_pinecone_metadata()
+    assert meta["rule_number"] == "2.04"
+    assert meta["section_title"] == "Player Eligibility"
+    assert meta["page_number"] == 10
 
 
 def test_chunk_id_format():
