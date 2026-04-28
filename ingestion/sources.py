@@ -15,6 +15,15 @@ class SourceConfig:
         return self.path.stem
 
 
+# When a user filters by a governing body, also include its base ruleset.
+# DYS uses NFHS_SOFTBALL as its base rules; all others are standalone.
+GOVERNING_BODY_DEPS: dict[str, list[str]] = {
+    "DYB": ["DYB"],
+    "DYS": ["DYS", "NFHS_SOFTBALL"],
+    "OBR": ["OBR"],
+    "NFHS_SOFTBALL": ["NFHS_SOFTBALL"],
+}
+
 SOURCES: list[SourceConfig] = [
     SourceConfig(Path("/app/pdfs/2026-DYB-Official-Playing-Rules.pdf"), GoverningBody.DYB, 2026),
     SourceConfig(Path("/app/pdfs/2026-DYS-Official-Playing-Rules.pdf"), GoverningBody.DYS, 2026),

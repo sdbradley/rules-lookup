@@ -8,6 +8,7 @@ load_dotenv()
 
 from embedder import embed_batch
 from pinecone_store import _get_index
+from sources import GOVERNING_BODY_DEPS
 
 MODEL = "claude-sonnet-4-6"
 
@@ -22,14 +23,22 @@ Guidelines:
 - Use plain language unless quoting directly from the rules"""
 
 
+def build_filter(governing_body: str | None) -> dict | None:
+    if governing_body is None:
+        return None
+    bodies = GOVERNING_BODY_DEPS.get(governing_body, [governing_body])
+    if len(bodies) == 1:
+        return {"governing_body": {"$eq": bodies[0]}}
+    return {"governing_body": {"$in": bodies}}
+
+
 def retrieve(question: str, governing_body: str | None = None, top_k: int = 5) -> list[dict]:
     vector = embed_batch([question])[0]
-    filter_expr = {"governing_body": {"$eq": governing_body}} if governing_body else None
     results = _get_index().query(
         vector=vector,
         top_k=top_k,
         include_metadata=True,
-        filter=filter_expr,
+        filter=build_filter(governing_body),
     )
     return [match.metadata for match in results.matches]
 

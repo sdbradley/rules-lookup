@@ -1,4 +1,4 @@
-from query import build_prompt, format_sources
+from query import build_prompt, format_sources, build_filter
 
 
 def make_chunk(**kwargs) -> dict:
@@ -69,3 +69,30 @@ class TestFormatSources:
         chunks = [make_chunk(), make_chunk(governing_body="OBR")]
         result = format_sources(chunks)
         assert result.count("\n") >= 1
+
+
+class TestBuildFilter:
+    def test_none_returns_none(self):
+        assert build_filter(None) is None
+
+    def test_standalone_body_uses_eq(self):
+        f = build_filter("DYB")
+        assert f == {"governing_body": {"$eq": "DYB"}}
+
+    def test_obr_uses_eq(self):
+        f = build_filter("OBR")
+        assert f == {"governing_body": {"$eq": "OBR"}}
+
+    def test_nfhs_softball_uses_eq(self):
+        f = build_filter("NFHS_SOFTBALL")
+        assert f == {"governing_body": {"$eq": "NFHS_SOFTBALL"}}
+
+    def test_dys_includes_nfhs_softball(self):
+        f = build_filter("DYS")
+        assert f == {"governing_body": {"$in": ["DYS", "NFHS_SOFTBALL"]}}
+
+    def test_dys_filter_contains_both_bodies(self):
+        f = build_filter("DYS")
+        bodies = f["governing_body"]["$in"]
+        assert "DYS" in bodies
+        assert "NFHS_SOFTBALL" in bodies
