@@ -2,6 +2,7 @@ pdfs/
 output/
 .env
 .DS_Store
+firebase-credentials.json
 
 __pycache__/
 *.pyc
