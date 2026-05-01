@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "396650179371",
+    "project_id": "rules-15d45",
+    "storage_bucket": "rules-15d45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:396650179371:android:6e5c7ee29fc6f75536b36e",
+        "android_client_info": {
+          "package_name": "com.coreinsightgroup.rules_lookup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "396650179371-fp3hl0qpour0u64i9n5vk5cgl7c25e1p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2u3HLDAJrt8thtNfXcImI_4FbEdmurzo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "396650179371-fp3hl0qpour0u64i9n5vk5cgl7c25e1p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
