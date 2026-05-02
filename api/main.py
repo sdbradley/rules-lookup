@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 import firebase_admin
 import firebase_admin.credentials
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 
 from auth import verify_token
 from models import QueryRequest, QueryResponse
-from query_handler import handle_query
+from query_handler import handle_query, stream_query
 from usage import get_monthly_count, increment_count, is_over_limit
 
 _db = None
@@ -55,3 +56,25 @@ def query(
 
     increment_count(db, uid)
     return result
+
+
+@app.post("/query/stream")
+def query_stream(
+    req: QueryRequest,
+    authorization: str | None = Header(default=None),
+):
+    uid = verify_token(authorization)
+
+    db = get_db()
+    count = get_monthly_count(db, uid)
+    if is_over_limit(count):
+        raise HTTPException(status_code=429, detail="Monthly query limit reached")
+
+    _, generator = stream_query(req)
+    increment_count(db, uid)
+
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )

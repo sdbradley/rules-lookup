@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,9 +21,15 @@ class ApiException implements Exception {
   final String? message;
 }
 
-class QueryResult {
-  const QueryResult({required this.answer, required this.sources});
-  final String answer;
+sealed class StreamEvent {}
+
+class TextEvent extends StreamEvent {
+  TextEvent(this.text);
+  final String text;
+}
+
+class DoneEvent extends StreamEvent {
+  DoneEvent(this.sources);
   final List<Source> sources;
 }
 
@@ -31,36 +38,53 @@ class ApiService {
 
   final AuthService _auth;
 
-  Future<QueryResult> query(
+  Future<Map<String, String>> _headers() async {
+    final token = await _auth.getIdToken();
+    return {
+      HttpHeaders.contentTypeHeader: 'application/json',
+      if (token != null) HttpHeaders.authorizationHeader: 'Bearer $token',
+    };
+  }
+
+  Stream<StreamEvent> queryStream(
     String question,
     GoverningBody? governingBody,
-  ) async {
-    final token = await _auth.getIdToken();
-
+  ) async* {
     final body = <String, dynamic>{'question': question};
     if (governingBody != null) body['governing_body'] = governingBody.apiValue;
 
-    final response = await http
-        .post(
-          Uri.parse('$_baseUrl/query'),
-          headers: {
-            HttpHeaders.contentTypeHeader: 'application/json',
-            if (token != null) HttpHeaders.authorizationHeader: 'Bearer $token',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 30));
+    final request =
+        http.Request('POST', Uri.parse('$_baseUrl/query/stream'));
+    request.headers.addAll(await _headers());
+    request.body = jsonEncode(body);
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final sources = (json['sources'] as List)
-          .map((s) => Source.fromJson(s as Map<String, dynamic>))
-          .toList();
-      return QueryResult(answer: json['answer'] as String, sources: sources);
-    } else if (response.statusCode == 429) {
-      throw const RateLimitException();
-    } else {
-      throw ApiException(response.statusCode);
+    final streamedResponse = await http.Client()
+        .send(request)
+        .timeout(const Duration(seconds: 15));
+
+    if (streamedResponse.statusCode == 429) throw const RateLimitException();
+    if (streamedResponse.statusCode != 200) {
+      throw ApiException(streamedResponse.statusCode);
+    }
+
+    String buffer = '';
+    await for (final chunk
+        in streamedResponse.stream.transform(utf8.decoder)) {
+      buffer += chunk;
+      final lines = buffer.split('\n');
+      buffer = lines.last;
+      for (final line in lines.take(lines.length - 1)) {
+        if (!line.startsWith('data: ')) continue;
+        final data = jsonDecode(line.substring(6)) as Map<String, dynamic>;
+        if (data['type'] == 'text') {
+          yield TextEvent(data['text'] as String);
+        } else if (data['type'] == 'done') {
+          final sources = (data['sources'] as List)
+              .map((s) => Source.fromJson(s as Map<String, dynamic>))
+              .toList();
+          yield DoneEvent(sources);
+        }
+      }
     }
   }
 }

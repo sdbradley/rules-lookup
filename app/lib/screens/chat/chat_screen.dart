@@ -55,23 +55,34 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final result = await context
-          .read<ApiService>()
-          .query(text, _selectedBody);
+      final stream = context.read<ApiService>().queryStream(text, _selectedBody);
+      String accumulated = '';
 
-      setState(() {
-        _messages[_messages.length - 1] = Message(
-          role: MessageRole.assistant,
-          text: result.answer,
-          sources: result.sources,
-        );
-      });
+      await for (final event in stream) {
+        if (event is TextEvent) {
+          accumulated += event.text;
+          setState(() {
+            _messages[_messages.length - 1] = Message(
+              role: MessageRole.assistant,
+              text: accumulated,
+            );
+          });
+          _scrollToBottom();
+        } else if (event is DoneEvent) {
+          setState(() {
+            _messages[_messages.length - 1] = Message(
+              role: MessageRole.assistant,
+              text: accumulated,
+              sources: event.sources,
+            );
+          });
+        }
+      }
     } on RateLimitException {
       setState(() {
         _messages[_messages.length - 1] = const Message(
           role: MessageRole.assistant,
-          text:
-              "You've reached your monthly limit of 20 free queries. Upgrade coming soon!",
+          text: "You've reached your monthly limit of 20 free queries. Upgrade coming soon!",
         );
       });
     } on ApiException catch (e) {

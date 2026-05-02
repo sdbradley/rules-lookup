@@ -1,4 +1,6 @@
+import json
 import os
+from collections.abc import Generator
 
 import anthropic
 from pinecone import Pinecone
@@ -121,3 +123,23 @@ def handle_query(req: QueryRequest) -> QueryResponse:
         answer=answer,
         sources=[chunk_to_source(c) for c in chunks],
     )
+
+
+def stream_query(req: QueryRequest) -> tuple[list[dict], Generator[str, None, None]]:
+    chunks = retrieve(req.question, req.governing_body)
+
+    def _generate() -> Generator[str, None, None]:
+        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        with client.messages.stream(
+            model=MODEL,
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": _build_prompt(req.question, chunks)}],
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'type': 'text', 'text': text})}\n\n"
+
+        sources = [chunk_to_source(c).model_dump() for c in chunks]
+        yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+
+    return chunks, _generate()

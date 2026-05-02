@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../models/message.dart';
 
@@ -37,14 +38,41 @@ class MessageBubble extends StatelessWidget {
                       width: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(
-                      message.text,
-                      style: TextStyle(
-                        color: isUser
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurface,
-                      ),
-                    ),
+                  : isUser
+                      ? Text(
+                          message.text,
+                          style: TextStyle(color: colorScheme.onPrimary),
+                        )
+                      : MarkdownBody(
+                          data: message.text,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(color: colorScheme.onSurface),
+                            strong: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            em: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            h1: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h2: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            code: TextStyle(
+                              color: colorScheme.onSurface,
+                              backgroundColor:
+                                  colorScheme.surfaceContainerHighest,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
             ),
             if (message.sources.isNotEmpty)
               Padding(
