@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'screens/auth/login_screen.dart';
 import 'screens/chat/chat_screen.dart';
+import 'services/api_service.dart';
 import 'services/auth_service.dart';
 
 class RulesLookupApp extends StatelessWidget {
@@ -11,8 +12,13 @@ class RulesLookupApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Provider(
-      create: (_) => AuthService(),
+    return MultiProvider(
+      providers: [
+        Provider(create: (_) => AuthService()),
+        ProxyProvider<AuthService, ApiService>(
+          update: (_, auth, __) => ApiService(auth),
+        ),
+      ],
       child: MaterialApp(
         title: 'Rules Lookup',
         theme: ThemeData(

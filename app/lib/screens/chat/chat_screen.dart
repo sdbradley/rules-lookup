@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/governing_body.dart';
 import '../../models/message.dart';
+import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/governing_body_selector.dart';
 import '../../widgets/message_bubble.dart';
@@ -48,21 +49,49 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _isSending = true;
       _messages.add(Message(role: MessageRole.user, text: text));
-      _messages.add(Message(
-          role: MessageRole.assistant, text: '', isLoading: true));
+      _messages.add(
+          Message(role: MessageRole.assistant, text: '', isLoading: true));
     });
     _scrollToBottom();
 
-    // Phase 7 will replace this placeholder with real API call
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _messages[_messages.length - 1] = const Message(
-        role: MessageRole.assistant,
-        text: 'API integration coming in Phase 7.',
-      );
-      _isSending = false;
-    });
-    _scrollToBottom();
+    try {
+      final result = await context
+          .read<ApiService>()
+          .query(text, _selectedBody);
+
+      setState(() {
+        _messages[_messages.length - 1] = Message(
+          role: MessageRole.assistant,
+          text: result.answer,
+          sources: result.sources,
+        );
+      });
+    } on RateLimitException {
+      setState(() {
+        _messages[_messages.length - 1] = const Message(
+          role: MessageRole.assistant,
+          text:
+              "You've reached your monthly limit of 20 free queries. Upgrade coming soon!",
+        );
+      });
+    } on ApiException catch (e) {
+      setState(() {
+        _messages[_messages.length - 1] = Message(
+          role: MessageRole.assistant,
+          text: 'Something went wrong (error ${e.statusCode}). Please try again.',
+        );
+      });
+    } catch (e) {
+      setState(() {
+        _messages[_messages.length - 1] = const Message(
+          role: MessageRole.assistant,
+          text: 'Could not reach the server. Check your connection and try again.',
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+      _scrollToBottom();
+    }
   }
 
   @override
@@ -155,8 +184,8 @@ class _InputBar extends StatelessWidget {
           12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(
-            top: BorderSide(color: Theme.of(context).dividerColor)),
+        border:
+            Border(top: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: Row(
         children: [
