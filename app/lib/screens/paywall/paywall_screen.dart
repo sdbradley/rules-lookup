@@ -31,7 +31,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Could not load subscription options.';
+        _errorMessage = 'Could not load subscription options.\n\nDebug: $e';
         _isLoading = false;
       });
     }
