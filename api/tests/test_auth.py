@@ -4,6 +4,14 @@ from fastapi import HTTPException
 import auth
 
 
+@pytest.fixture(autouse=True)
+def disable_skip_auth():
+    original = auth._SKIP_AUTH
+    auth._SKIP_AUTH = False
+    yield
+    auth._SKIP_AUTH = original
+
+
 def test_verify_token_missing_header():
     with pytest.raises(HTTPException) as exc:
         auth.verify_token(None)

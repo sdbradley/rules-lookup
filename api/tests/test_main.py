@@ -18,10 +18,11 @@ def test_health():
 
 
 @patch("main.verify_token", return_value="uid-abc")
+@patch("main.is_subscriber", return_value=False)
 @patch("main.get_monthly_count", return_value=0)
 @patch("main.increment_count")
 @patch("main.handle_query")
-def test_query_success(mock_handle, mock_inc, mock_count, mock_verify):
+def test_query_success(mock_handle, mock_inc, mock_count, mock_sub, mock_verify):
     mock_handle.return_value = QueryResponse(
         answer="The infield fly rule applies when...",
         sources=[],
@@ -47,8 +48,9 @@ def test_query_unauthorized(mock_verify):
 
 
 @patch("main.verify_token", return_value="uid-abc")
+@patch("main.is_subscriber", return_value=False)
 @patch("main.get_monthly_count", return_value=20)
-def test_query_over_limit(mock_count, mock_verify):
+def test_query_over_limit(mock_count, mock_sub, mock_verify):
     response = client.post(
         "/query",
         json={"question": "What is the infield fly rule?"},
@@ -58,10 +60,11 @@ def test_query_over_limit(mock_count, mock_verify):
 
 
 @patch("main.verify_token", return_value="uid-abc")
+@patch("main.is_subscriber", return_value=False)
 @patch("main.get_monthly_count", return_value=0)
 @patch("main.increment_count")
 @patch("main.handle_query", side_effect=Exception("Pinecone unavailable"))
-def test_query_internal_error(mock_handle, mock_inc, mock_count, mock_verify):
+def test_query_internal_error(mock_handle, mock_inc, mock_count, mock_sub, mock_verify):
     response = client.post(
         "/query",
         json={"question": "What is the infield fly rule?"},

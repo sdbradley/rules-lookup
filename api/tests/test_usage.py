@@ -54,3 +54,29 @@ def test_is_over_limit_at_limit():
 
 def test_is_over_limit_above_limit():
     assert usage.is_over_limit(FREE_TIER_LIMIT + 5) is True
+
+
+def _mock_subscriber_db(is_subscriber: bool | None):
+    db = MagicMock()
+    doc_ref = MagicMock()
+    db.collection.return_value.document.return_value = doc_ref
+    snap = MagicMock()
+    snap.exists = is_subscriber is not None
+    snap.to_dict.return_value = {"is_subscriber": is_subscriber} if is_subscriber is not None else {}
+    doc_ref.get.return_value = snap
+    return db
+
+
+def test_is_subscriber_true():
+    db = _mock_subscriber_db(True)
+    assert usage.is_subscriber(db, "uid-1") is True
+
+
+def test_is_subscriber_false():
+    db = _mock_subscriber_db(False)
+    assert usage.is_subscriber(db, "uid-1") is False
+
+
+def test_is_subscriber_no_doc():
+    db = _mock_subscriber_db(None)
+    assert usage.is_subscriber(db, "uid-1") is False

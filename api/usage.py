@@ -25,5 +25,12 @@ def increment_count(db, uid: str) -> None:
     ref.set({"uid": uid, "month": _month_key(), "count": current + 1})
 
 
+def is_subscriber(db, uid: str) -> bool:
+    snap = db.collection("subscribers").document(uid).get()
+    if not snap.exists:
+        return False
+    return snap.to_dict().get("is_subscriber", False)
+
+
 def is_over_limit(count: int) -> bool:
     return count >= FREE_TIER_LIMIT

@@ -3,13 +3,14 @@ from contextlib import asynccontextmanager
 
 import firebase_admin
 import firebase_admin.credentials
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from auth import verify_token
 from models import QueryRequest, QueryResponse
 from query_handler import handle_query, stream_query
-from usage import get_monthly_count, increment_count, is_over_limit
+from usage import get_monthly_count, increment_count, is_over_limit, is_subscriber
+from webhook import handle_event, verify_webhook_secret
 
 _db = None
 
@@ -32,6 +33,14 @@ def get_db():
     return _db
 
 
+def _check_limit(db, uid: str) -> None:
+    if is_subscriber(db, uid):
+        return
+    count = get_monthly_count(db, uid)
+    if is_over_limit(count):
+        raise HTTPException(status_code=429, detail="Monthly query limit reached")
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -43,11 +52,8 @@ def query(
     authorization: str | None = Header(default=None),
 ):
     uid = verify_token(authorization)
-
     db = get_db()
-    count = get_monthly_count(db, uid)
-    if is_over_limit(count):
-        raise HTTPException(status_code=429, detail="Monthly query limit reached")
+    _check_limit(db, uid)
 
     try:
         result = handle_query(req)
@@ -64,11 +70,8 @@ def query_stream(
     authorization: str | None = Header(default=None),
 ):
     uid = verify_token(authorization)
-
     db = get_db()
-    count = get_monthly_count(db, uid)
-    if is_over_limit(count):
-        raise HTTPException(status_code=429, detail="Monthly query limit reached")
+    _check_limit(db, uid)
 
     _, generator = stream_query(req)
     increment_count(db, uid)
@@ -78,3 +81,17 @@ def query_stream(
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
     )
+
+
+@app.post("/webhooks/revenuecat")
+async def revenuecat_webhook(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    if not verify_webhook_secret(authorization):
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+
+    body = await request.json()
+    event = body.get("event", {})
+    handle_event(get_db(), event)
+    return {"received": True}
