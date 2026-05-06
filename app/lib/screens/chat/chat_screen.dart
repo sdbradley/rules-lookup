@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/governing_body.dart';
 import '../../models/message.dart';
+import '../../screens/paywall/paywall_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/governing_body_selector.dart';
@@ -80,11 +81,15 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } on RateLimitException {
       setState(() {
-        _messages[_messages.length - 1] = const Message(
-          role: MessageRole.assistant,
-          text: "You've reached your monthly limit of 20 free queries. Upgrade coming soon!",
-        );
+        _messages.removeLast();
+        _isSending = false;
       });
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PaywallScreen()),
+        );
+      }
+      return;
     } on ApiException catch (e) {
       setState(() {
         _messages[_messages.length - 1] = Message(

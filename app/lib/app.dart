@@ -6,6 +6,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/chat/chat_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/subscription_service.dart';
 
 class RulesLookupApp extends StatelessWidget {
   const RulesLookupApp({super.key});
@@ -44,7 +45,11 @@ class _AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        return snapshot.hasData ? const ChatScreen() : const LoginScreen();
+        if (snapshot.hasData) {
+          SubscriptionService.initialize(snapshot.data!.uid);
+          return const ChatScreen();
+        }
+        return const LoginScreen();
       },
     );
   }
