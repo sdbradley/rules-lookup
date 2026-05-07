@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import time
 from collections.abc import Generator
 
 import anthropic
@@ -7,6 +9,9 @@ from pinecone import Pinecone
 import voyageai
 
 from models import QueryRequest, QueryResponse, Source
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 _voyage_client = None
 _pinecone_index = None
@@ -95,7 +100,30 @@ def _build_prompt(question: str, chunks: list[dict]) -> str:
     return f"Rule excerpts:\n\n{context}\n\nQuestion: {question}"
 
 
-def generate(question: str, chunks: list[dict]) -> str:
+def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
+               input_tokens: int, output_tokens: int, latency_ms: int) -> None:
+    logger.info(json.dumps({
+        "event": "query",
+        "uid": uid,
+        "question": req.question,
+        "governing_body": req.governing_body,
+        "chunks_retrieved": len(chunks),
+        "sources": [
+            {
+                "governing_body": c.get("governing_body"),
+                "rule_number": c.get("rule_number"),
+                "section_title": c.get("section_title"),
+            }
+            for c in chunks
+        ],
+        "answer": answer,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "latency_ms": latency_ms,
+    }))
+
+
+def generate(question: str, chunks: list[dict]) -> tuple[str, int, int]:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     response = client.messages.create(
         model=MODEL,
@@ -103,7 +131,11 @@ def generate(question: str, chunks: list[dict]) -> str:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": _build_prompt(question, chunks)}],
     )
-    return response.content[0].text
+    return (
+        response.content[0].text,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+    )
 
 
 def chunk_to_source(chunk: dict) -> Source:
@@ -116,20 +148,28 @@ def chunk_to_source(chunk: dict) -> Source:
     )
 
 
-def handle_query(req: QueryRequest) -> QueryResponse:
+def handle_query(req: QueryRequest, uid: str = "") -> QueryResponse:
+    start = time.monotonic()
     chunks = retrieve(req.question, req.governing_body)
-    answer = generate(req.question, chunks)
+    answer, input_tokens, output_tokens = generate(req.question, chunks)
+    latency_ms = int((time.monotonic() - start) * 1000)
+    _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
     return QueryResponse(
         answer=answer,
         sources=[chunk_to_source(c) for c in chunks],
     )
 
 
-def stream_query(req: QueryRequest) -> tuple[list[dict], Generator[str, None, None]]:
+def stream_query(req: QueryRequest, uid: str = "") -> tuple[list[dict], Generator[str, None, None]]:
     chunks = retrieve(req.question, req.governing_body)
+    start = time.monotonic()
 
     def _generate() -> Generator[str, None, None]:
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        full_answer = []
+        input_tokens = 0
+        output_tokens = 0
+
         with client.messages.stream(
             model=MODEL,
             max_tokens=1024,
@@ -137,7 +177,15 @@ def stream_query(req: QueryRequest) -> tuple[list[dict], Generator[str, None, No
             messages=[{"role": "user", "content": _build_prompt(req.question, chunks)}],
         ) as stream:
             for text in stream.text_stream:
+                full_answer.append(text)
                 yield f"data: {json.dumps({'type': 'text', 'text': text})}\n\n"
+
+            usage = stream.get_final_message().usage
+            input_tokens = usage.input_tokens
+            output_tokens = usage.output_tokens
+
+        latency_ms = int((time.monotonic() - start) * 1000)
+        _log_query(uid, req, chunks, "".join(full_answer), input_tokens, output_tokens, latency_ms)
 
         sources = [chunk_to_source(c).model_dump() for c in chunks]
         yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"

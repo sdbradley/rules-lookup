@@ -65,14 +65,17 @@ def test_generate(mock_anthropic_cls):
     mock_anthropic_cls.return_value = client
     response = MagicMock()
     response.content = [MagicMock(text="The answer is yes.")]
+    response.usage = MagicMock(input_tokens=100, output_tokens=50)
     client.messages.create.return_value = response
 
-    answer = query_handler.generate("What is interference?", [SAMPLE_CHUNK])
+    answer, input_tokens, output_tokens = query_handler.generate("What is interference?", [SAMPLE_CHUNK])
     assert answer == "The answer is yes."
+    assert input_tokens == 100
+    assert output_tokens == 50
     client.messages.create.assert_called_once()
 
 
-@patch("query_handler.generate", return_value="Here is the answer.")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
 @patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
 def test_handle_query(mock_retrieve, mock_generate):
     req = QueryRequest(question="What is interference?", governing_body="OBR")
