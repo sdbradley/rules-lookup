@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 from collections.abc import Generator
@@ -9,9 +8,6 @@ from pinecone import Pinecone
 import voyageai
 
 from models import QueryRequest, QueryResponse, Source
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 _voyage_client = None
 _pinecone_index = None
@@ -102,7 +98,7 @@ def _build_prompt(question: str, chunks: list[dict]) -> str:
 
 def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
                input_tokens: int, output_tokens: int, latency_ms: int) -> None:
-    logger.info(json.dumps({
+    print(json.dumps({
         "event": "query",
         "uid": uid,
         "question": req.question,
@@ -120,7 +116,7 @@ def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "latency_ms": latency_ms,
-    }))
+    }), flush=True)
 
 
 def generate(question: str, chunks: list[dict]) -> tuple[str, int, int]:
