@@ -47,6 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty || _isSending) return;
 
     _inputController.clear();
+    FocusScope.of(context).unfocus();
     setState(() {
       _isSending = true;
       _messages.add(Message(role: MessageRole.user, text: text));
@@ -129,15 +130,19 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _messages.isEmpty
-                ? _EmptyState(selectedBody: _selectedBody)
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    itemCount: _messages.length,
-                    itemBuilder: (_, i) =>
-                        MessageBubble(message: _messages[i]),
-                  ),
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: _messages.isEmpty
+                  ? _EmptyState(selectedBody: _selectedBody)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      itemCount: _messages.length,
+                      itemBuilder: (_, i) =>
+                          MessageBubble(message: _messages[i]),
+                    ),
+            ),
           ),
           _InputBar(
             controller: _inputController,
