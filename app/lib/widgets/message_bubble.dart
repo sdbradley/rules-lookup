@@ -29,7 +29,7 @@ class MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isUser
                     ? colorScheme.primary
-                    : colorScheme.surfaceContainerHighest,
+                    : colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: message.isLoading
