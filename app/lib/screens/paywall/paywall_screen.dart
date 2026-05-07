@@ -74,7 +74,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upgrade'),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -93,10 +92,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.sports_baseball, size: 64, color: Colors.deepOrange),
+          Image.asset('assets/logo.png', height: 64),
           const SizedBox(height: 16),
-          Text(
-            'Unlimited RulesAI',
+          Text.rich(
+            TextSpan(
+              text: 'Unlimited Rules',
+              children: [
+                TextSpan(
+                  text: 'AI',
+                  style: const TextStyle(color: Color(0xFF2D7FE6)),
+                ),
+              ],
+            ),
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
@@ -113,8 +120,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          const _FeatureRow(icon: Icons.all_inclusive, text: 'Unlimited queries'),
-          const _FeatureRow(icon: Icons.menu_book, text: 'All rulebooks: DYB, DYS, OBR, NFHS Softball'),
+          const _FeatureRow(icon: Icons.all_inclusive, text: 'Look up as many rules as you want'),
+          const _FeatureRow(icon: Icons.menu_book, text: 'Access to all rulebooks'),
           const _FeatureRow(icon: Icons.cancel_outlined, text: 'Cancel anytime'),
           const SizedBox(height: 32),
           if (_errorMessage != null) ...[
@@ -155,7 +162,7 @@ class _FeatureRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: Colors.deepOrange, size: 20),
+          Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
           const SizedBox(width: 12),
           Expanded(child: Text(text)),
         ],

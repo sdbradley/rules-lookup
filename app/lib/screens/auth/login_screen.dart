@@ -72,10 +72,18 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.sports_baseball, size: 64, color: Colors.deepOrange),
+                Image.asset('assets/logo.png', height: 100),
                 const SizedBox(height: 16),
-                Text(
-                  'RulesAI',
+                Text.rich(
+                  TextSpan(
+                    text: 'Rules',
+                    children: [
+                      TextSpan(
+                        text: 'AI',
+                        style: const TextStyle(color: Color(0xFF2D7FE6)),
+                      ),
+                    ],
+                  ),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -83,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Baseball & Softball Rules Assistant',
+                  'Your AI rules expert on the field',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey,
                       ),

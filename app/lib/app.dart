@@ -23,9 +23,19 @@ class RulesLookupApp extends StatelessWidget {
       child: MaterialApp(
         title: 'RulesAI',
         theme: ThemeData(
-          colorSchemeSeed: Colors.deepOrange,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2D7FE6),
+          ),
           useMaterial3: true,
         ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2D7FE6),
+            brightness: Brightness.dark,
+          ).copyWith(surface: const Color(0xFF011A38)),
+          useMaterial3: true,
+        ),
+        themeMode: ThemeMode.system,
         home: const _AuthGate(),
       ),
     );
