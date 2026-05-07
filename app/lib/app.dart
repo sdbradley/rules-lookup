@@ -21,7 +21,7 @@ class RulesLookupApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Rules Lookup',
+        title: 'RulesAI',
         theme: ThemeData(
           colorSchemeSeed: Colors.deepOrange,
           useMaterial3: true,

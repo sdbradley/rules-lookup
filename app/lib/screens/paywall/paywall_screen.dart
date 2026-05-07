@@ -96,7 +96,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           const Icon(Icons.sports_baseball, size: 64, color: Colors.deepOrange),
           const SizedBox(height: 16),
           Text(
-            'Unlimited Rules Lookup',
+            'Unlimited RulesAI',
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall

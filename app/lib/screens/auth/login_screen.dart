@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.sports_baseball, size: 64, color: Colors.deepOrange),
                 const SizedBox(height: 16),
                 Text(
-                  'Rules Lookup',
+                  'RulesAI',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
