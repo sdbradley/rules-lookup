@@ -32,7 +32,10 @@ class RulesLookupApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF2D7FE6),
             brightness: Brightness.dark,
-          ).copyWith(surface: const Color(0xFF011A38)),
+          ).copyWith(
+            surface: const Color(0xFF0D2A4A),
+            onSurface: const Color(0xFFC8D8E8),
+          ),
           useMaterial3: true,
         ),
         themeMode: ThemeMode.system,
