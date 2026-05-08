@@ -67,6 +67,7 @@ flutter_launcher_icons:
   android: false
   image_path: "assets/app_icon.png"
   min_ios_version: "15.0"
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
