@@ -71,6 +71,17 @@ class MessageBubble extends StatelessWidget {
                                   colorScheme.surfaceContainerHighest,
                               fontFamily: 'monospace',
                             ),
+                            blockquote: TextStyle(color: colorScheme.onSurface),
+                            blockquoteDecoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border(
+                                left: BorderSide(
+                                  color: colorScheme.primary,
+                                  width: 4,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
             ),
