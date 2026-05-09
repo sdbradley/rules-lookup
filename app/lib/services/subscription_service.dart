@@ -1,8 +1,8 @@
 import 'package:purchases_flutter/purchases_flutter.dart';
 
-const _revenueCatApiKey = 'appl_bQSmbmEpIGBYDKBkGEDWeXJXDaX';
-const _offeringId = 'rulesai_default';
-const _entitlementId = 'unlimited';
+const _revenueCatApiKey = 'appl_dcHjGndlBVFzGaKmIxXRRjNWGBR';
+const _offeringId = 'default';
+const _entitlementId = 'RulesAI Pro';
 
 class SubscriptionService {
   static Future<void> initialize(String uid) async {
