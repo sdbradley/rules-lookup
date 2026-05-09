@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from auth import verify_token
 from models import QueryRequest, QueryResponse
 from query_handler import handle_query, stream_query
+from rate_limit import check_rate_limit
 from usage import get_monthly_count, increment_count, is_over_limit, is_subscriber
 from webhook import handle_event, verify_webhook_secret
 
@@ -52,6 +53,7 @@ def query(
     authorization: str | None = Header(default=None),
 ):
     uid = verify_token(authorization)
+    check_rate_limit(uid)
     db = get_db()
     _check_limit(db, uid)
 
@@ -70,6 +72,7 @@ def query_stream(
     authorization: str | None = Header(default=None),
 ):
     uid = verify_token(authorization)
+    check_rate_limit(uid)
     db = get_db()
     _check_limit(db, uid)
 
