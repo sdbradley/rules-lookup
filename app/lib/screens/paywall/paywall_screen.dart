@@ -112,7 +112,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'You\'ve used all 20 free queries this month.',
+            'You\'ve used all 5 free queries this month.',
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-FREE_TIER_LIMIT = 20
+FREE_TIER_LIMIT = 5
 
 
 def _month_key() -> str:
