@@ -183,7 +183,7 @@ def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
     )
 
 
-def stream_query(req: QueryRequest, uid: str = "", db=None) -> tuple[list[dict], Generator[str, None, None]]:
+def stream_query(req: QueryRequest, uid: str = "", db=None, on_complete=None) -> tuple[list[dict], Generator[str, None, None]]:
     chunks = retrieve(req.question, req.governing_body)
     start = time.monotonic()
 
@@ -214,6 +214,9 @@ def stream_query(req: QueryRequest, uid: str = "", db=None) -> tuple[list[dict],
             _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
 
         sources = [chunk_to_source(c).model_dump() for c in chunks]
+        if on_complete is not None:
+            on_complete(answer, sources)
+
         yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
 
     return chunks, _generate()
