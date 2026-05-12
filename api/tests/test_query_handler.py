@@ -150,3 +150,30 @@ def test_handle_query_no_firestore_when_db_none(mock_retrieve, mock_generate, mo
     req = QueryRequest(question="What is interference?", governing_body="OBR")
     query_handler.handle_query(req, uid="uid-abc", db=None)
     mock_log_fs.assert_not_called()
+
+
+@patch("query_handler.anthropic.Anthropic")
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_stream_query_calls_on_complete(mock_retrieve, mock_anthropic_cls):
+    client = MagicMock()
+    mock_anthropic_cls.return_value = client
+    stream_ctx = MagicMock()
+    stream_ctx.__enter__ = MagicMock(return_value=stream_ctx)
+    stream_ctx.__exit__ = MagicMock(return_value=False)
+    stream_ctx.text_stream = iter(["The answer ", "is yes."])
+    final_msg = MagicMock()
+    final_msg.usage = MagicMock(input_tokens=100, output_tokens=20)
+    stream_ctx.get_final_message.return_value = final_msg
+    client.messages.stream.return_value = stream_ctx
+
+    on_complete = MagicMock()
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    _, gen = query_handler.stream_query(req, uid="uid-abc", on_complete=on_complete)
+
+    # exhaust the generator to trigger on_complete
+    list(gen)
+
+    on_complete.assert_called_once()
+    answer, sources = on_complete.call_args[0]
+    assert answer == "The answer is yes."
+    assert isinstance(sources, list)
