@@ -58,7 +58,7 @@ def query(
     _check_limit(db, uid)
 
     try:
-        result = handle_query(req, uid=uid)
+        result = handle_query(req, uid=uid, db=get_db())
     except Exception as e:
         raise HTTPException(status_code=500, detail="Query failed") from e
 
@@ -76,7 +76,7 @@ def query_stream(
     db = get_db()
     _check_limit(db, uid)
 
-    _, generator = stream_query(req, uid=uid)
+    _, generator = stream_query(req, uid=uid, db=get_db())
     increment_count(db, uid)
 
     return StreamingResponse(

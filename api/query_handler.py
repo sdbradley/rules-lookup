@@ -2,6 +2,7 @@ import json
 import os
 import time
 from collections.abc import Generator
+from datetime import datetime, timezone
 
 import anthropic
 from pinecone import Pinecone
@@ -69,7 +70,12 @@ def retrieve(question: str, governing_body: str | None = None, top_k: int = 5) -
         include_metadata=True,
         filter=build_filter(governing_body),
     )
-    return [match.metadata for match in results.matches]
+    chunks = []
+    for match in results.matches:
+        chunk = dict(match.metadata)
+        chunk["_id"] = match.id
+        chunks.append(chunk)
+    return chunks
 
 
 def _build_prompt(question: str, chunks: list[dict]) -> str:
@@ -94,6 +100,25 @@ def _build_prompt(question: str, chunks: list[dict]) -> str:
 
     context = "\n\n".join(parts)
     return f"Rule excerpts:\n\n{context}\n\nQuestion: {question}"
+
+
+def _log_query_to_firestore(
+    db,
+    uid: str,
+    req: QueryRequest,
+    chunks: list[dict],
+    answer: str,
+    latency_ms: int,
+) -> None:
+    db.collection("query_logs").add({
+        "uid": uid,
+        "question": req.question,
+        "governing_body": req.governing_body,
+        "chunk_ids": [c["_id"] for c in chunks if "_id" in c],
+        "answer": answer,
+        "latency_ms": latency_ms,
+        "created_at": datetime.now(timezone.utc),
+    })
 
 
 def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
@@ -144,19 +169,21 @@ def chunk_to_source(chunk: dict) -> Source:
     )
 
 
-def handle_query(req: QueryRequest, uid: str = "") -> QueryResponse:
+def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
     start = time.monotonic()
     chunks = retrieve(req.question, req.governing_body)
     answer, input_tokens, output_tokens = generate(req.question, chunks)
     latency_ms = int((time.monotonic() - start) * 1000)
     _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
+    if db is not None:
+        _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
     return QueryResponse(
         answer=answer,
         sources=[chunk_to_source(c) for c in chunks],
     )
 
 
-def stream_query(req: QueryRequest, uid: str = "") -> tuple[list[dict], Generator[str, None, None]]:
+def stream_query(req: QueryRequest, uid: str = "", db=None) -> tuple[list[dict], Generator[str, None, None]]:
     chunks = retrieve(req.question, req.governing_body)
     start = time.monotonic()
 
@@ -181,7 +208,10 @@ def stream_query(req: QueryRequest, uid: str = "") -> tuple[list[dict], Generato
             output_tokens = usage.output_tokens
 
         latency_ms = int((time.monotonic() - start) * 1000)
-        _log_query(uid, req, chunks, "".join(full_answer), input_tokens, output_tokens, latency_ms)
+        answer = "".join(full_answer)
+        _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
+        if db is not None:
+            _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
 
         sources = [chunk_to_source(c).model_dump() for c in chunks]
         yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"

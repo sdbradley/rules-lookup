@@ -85,3 +85,68 @@ def test_handle_query(mock_retrieve, mock_generate):
     assert response.sources[0].governing_body == "OBR"
     mock_retrieve.assert_called_once_with("What is interference?", "OBR")
     mock_generate.assert_called_once_with("What is interference?", [SAMPLE_CHUNK])
+
+
+@patch("query_handler._get_index")
+@patch("query_handler.embed_batch")
+def test_retrieve_includes_vector_id(mock_embed, mock_get_index):
+    mock_embed.return_value = [[0.1] * 1024]
+    match = MagicMock()
+    match.id = "vec_abc123"
+    match.metadata = SAMPLE_CHUNK
+    mock_get_index.return_value.query.return_value.matches = [match]
+
+    chunks = query_handler.retrieve("what is interference?", "OBR")
+    assert chunks[0]["_id"] == "vec_abc123"
+    assert chunks[0]["governing_body"] == "OBR"
+
+
+def test_log_query_to_firestore():
+    db = MagicMock()
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    chunks = [dict(SAMPLE_CHUNK, _id="vec_abc")]
+
+    query_handler._log_query_to_firestore(db, "uid-123", req, chunks, "The answer.", 450)
+
+    db.collection.assert_called_once_with("query_logs")
+    written = db.collection.return_value.add.call_args[0][0]
+    assert written["uid"] == "uid-123"
+    assert written["question"] == "What is interference?"
+    assert written["governing_body"] == "OBR"
+    assert written["chunk_ids"] == ["vec_abc"]
+    assert written["answer"] == "The answer."
+    assert written["latency_ms"] == 450
+    assert "created_at" in written
+
+
+def test_log_query_to_firestore_omits_chunks_without_id():
+    db = MagicMock()
+    req = QueryRequest(question="What is a balk?", governing_body=None)
+    chunks = [SAMPLE_CHUNK]  # no _id field
+
+    query_handler._log_query_to_firestore(db, "uid-123", req, chunks, "A balk is...", 300)
+
+    written = db.collection.return_value.add.call_args[0][0]
+    assert written["chunk_ids"] == []
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_logs_to_firestore_when_db_provided(mock_retrieve, mock_generate, mock_log_fs):
+    db = MagicMock()
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    query_handler.handle_query(req, uid="uid-abc", db=db)
+    mock_log_fs.assert_called_once()
+    call_args = mock_log_fs.call_args[0]
+    assert call_args[0] is db
+    assert call_args[1] == "uid-abc"
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_no_firestore_when_db_none(mock_retrieve, mock_generate, mock_log_fs):
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    query_handler.handle_query(req, uid="uid-abc", db=None)
+    mock_log_fs.assert_not_called()
