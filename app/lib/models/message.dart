@@ -37,18 +37,26 @@ class Message {
     required this.text,
     this.sources = const [],
     this.isLoading = false,
+    this.logId,
   });
 
   final MessageRole role;
   final String text;
   final List<Source> sources;
   final bool isLoading;
+  final String? logId;
 
-  Message copyWith({String? text, List<Source>? sources, bool? isLoading}) =>
+  Message copyWith({
+    String? text,
+    List<Source>? sources,
+    bool? isLoading,
+    String? logId,
+  }) =>
       Message(
         role: role,
         text: text ?? this.text,
         sources: sources ?? this.sources,
         isLoading: isLoading ?? this.isLoading,
+        logId: logId ?? this.logId,
       );
 }

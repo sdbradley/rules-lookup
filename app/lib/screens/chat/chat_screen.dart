@@ -90,6 +90,7 @@ class _ChatScreenState extends State<ChatScreen> {
               role: MessageRole.assistant,
               text: accumulated,
               sources: event.sources,
+              logId: event.logId,
             );
             if (event.conversationId.isNotEmpty) {
               _conversationId = event.conversationId;

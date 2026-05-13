@@ -36,3 +36,9 @@ class QueryResponse(BaseModel):
     answer: str
     sources: list[Source]
     conversation_id: str | None = None
+    log_id: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    log_id: str
+    rating: str

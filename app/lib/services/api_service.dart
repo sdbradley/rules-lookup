@@ -30,9 +30,10 @@ class TextEvent extends StreamEvent {
 }
 
 class DoneEvent extends StreamEvent {
-  DoneEvent(this.sources, this.conversationId);
+  DoneEvent(this.sources, this.conversationId, this.logId);
   final List<Source> sources;
   final String conversationId;
+  final String? logId;
 }
 
 class ApiService {
@@ -87,7 +88,8 @@ class ApiService {
               .map((s) => Source.fromJson(s as Map<String, dynamic>))
               .toList();
           final convId = data['conversation_id'] as String? ?? '';
-          yield DoneEvent(sources, convId);
+          final logId = data['log_id'] as String?;
+          yield DoneEvent(sources, convId, logId);
         }
       }
     }
@@ -105,6 +107,14 @@ class ApiService {
     return list
         .map((c) => Conversation.fromJson(c as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> submitFeedback(String logId, String rating) async {
+    await http.post(
+      Uri.parse('$_baseUrl/feedback'),
+      headers: await _headers(),
+      body: jsonEncode({'log_id': logId, 'rating': rating}),
+    );
   }
 
   Future<Conversation> getConversationDetail(String conversationId) async {
