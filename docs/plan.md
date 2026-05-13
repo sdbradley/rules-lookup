@@ -191,7 +191,7 @@ Write a validation script: query each rulebook with 5 known rules and verify top
 - Rate limiting and abuse protection ✅
 - TestFlight / Play Console internal testing ✅
 
-### Phase 11 — Per-User Conversation History
+### Phase 11 — Per-User Conversation History ✅
 Automatic conversation history per user, surfaced like web AI models (ChatGPT, Claude) — no explicit save action required.
 
 **Data model (Firestore):**
