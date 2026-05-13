@@ -249,7 +249,7 @@ question_cache/{cacheKey}
 
 **Note:** Exact-match normalization will miss paraphrases and typos. If hit rate proves low after launch, Phase 12 can be revisited with semantic similarity matching using the existing Voyage embeddings infrastructure.
 
-### Phase 13 — Answer Feedback
+### Phase 13 — Answer Feedback ✅
 Thumbs up / thumbs down on each assistant answer, surfaced in the Flutter chat UI. Feeds directly into the existing `query_logs` collection so bad RAG results can be identified without waiting for user complaints.
 
 **Data model:**
@@ -330,3 +330,6 @@ Allow users to ask follow-up questions that carry context from previous turns in
 - [x] Phase 7: Flutter app streams a response and displays source chips
 - [x] Phase 8: Free user hitting limit sees paywall; paid user does not
 - [x] Phase 9: Multi-body question correctly cites both sources
+- [x] Phase 11: Conversation created on first message; follow-up appends to same conversation; History screen shows past conversations; tapping one replays the thread; New Chat resets session
+- [x] Phase 12: Repeated question returns cached answer without hitting Pinecone or Claude; cache key is normalized correctly
+- [x] Phase 13: Thumbs up/down appear below completed assistant answers; tapping writes to query_logs; toggle works; wrong-user request returns 403
