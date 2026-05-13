@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/governing_body.dart';
 import '../../models/message.dart';
+import '../../screens/history/history_screen.dart';
 import '../../screens/paywall/paywall_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -22,12 +23,21 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   GoverningBody? _selectedBody;
   bool _isSending = false;
+  String? _conversationId;
 
   @override
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _newChat() {
+    setState(() {
+      _messages.clear();
+      _conversationId = null;
+      _selectedBody = null;
+    });
   }
 
   void _scrollToBottom() {
@@ -57,7 +67,11 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final stream = context.read<ApiService>().queryStream(text, _selectedBody);
+      final stream = context.read<ApiService>().queryStream(
+            text,
+            _selectedBody,
+            conversationId: _conversationId,
+          );
       String accumulated = '';
 
       await for (final event in stream) {
@@ -77,6 +91,9 @@ class _ChatScreenState extends State<ChatScreen> {
               text: accumulated,
               sources: event.sources,
             );
+            if (event.conversationId.isNotEmpty) {
+              _conversationId = event.conversationId;
+            }
           });
         }
       }
@@ -120,6 +137,19 @@ class _ChatScreenState extends State<ChatScreen> {
           onChanged: (body) => setState(() => _selectedBody = body),
         ),
         actions: [
+          if (_messages.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.add_comment_outlined),
+              onPressed: _newChat,
+              tooltip: 'New chat',
+            ),
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HistoryScreen()),
+            ),
+            tooltip: 'History',
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthService>().signOut(),

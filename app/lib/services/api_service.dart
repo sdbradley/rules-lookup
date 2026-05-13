@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../models/conversation.dart';
 import '../models/governing_body.dart';
 import '../models/message.dart';
 import 'auth_service.dart';
@@ -29,8 +30,9 @@ class TextEvent extends StreamEvent {
 }
 
 class DoneEvent extends StreamEvent {
-  DoneEvent(this.sources);
+  DoneEvent(this.sources, this.conversationId);
   final List<Source> sources;
+  final String conversationId;
 }
 
 class ApiService {
@@ -48,10 +50,12 @@ class ApiService {
 
   Stream<StreamEvent> queryStream(
     String question,
-    GoverningBody? governingBody,
-  ) async* {
+    GoverningBody? governingBody, {
+    String? conversationId,
+  }) async* {
     final body = <String, dynamic>{'question': question};
     if (governingBody != null) body['governing_body'] = governingBody.apiValue;
+    if (conversationId != null) body['conversation_id'] = conversationId;
 
     final request =
         http.Request('POST', Uri.parse('$_baseUrl/query/stream'));
@@ -82,9 +86,36 @@ class ApiService {
           final sources = (data['sources'] as List)
               .map((s) => Source.fromJson(s as Map<String, dynamic>))
               .toList();
-          yield DoneEvent(sources);
+          final convId = data['conversation_id'] as String? ?? '';
+          yield DoneEvent(sources, convId);
         }
       }
     }
+  }
+
+  Future<List<Conversation>> getConversations() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/conversations'),
+      headers: await _headers(),
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode);
+    }
+    final list = jsonDecode(response.body) as List;
+    return list
+        .map((c) => Conversation.fromJson(c as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Conversation> getConversationDetail(String conversationId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
+      headers: await _headers(),
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode);
+    }
+    return Conversation.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>);
   }
 }

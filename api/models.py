@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
 class QueryRequest(BaseModel):
     question: str
     governing_body: str | None = None
+    conversation_id: str | None = None
 
 
 class Source(BaseModel):
@@ -14,6 +17,22 @@ class Source(BaseModel):
     page_number: int | None = None
 
 
+class ConversationSummary(BaseModel):
+    id: str
+    preview: str
+    governing_body: str | None = None
+    created_at: datetime
+
+
+class ConversationDetail(BaseModel):
+    id: str
+    preview: str
+    governing_body: str | None = None
+    created_at: datetime
+    messages: list[dict]
+
+
 class QueryResponse(BaseModel):
     answer: str
     sources: list[Source]
+    conversation_id: str | None = None
