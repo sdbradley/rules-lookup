@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
 
 import '../models/message.dart';
+import '../services/api_service.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({super.key, required this.message});
@@ -96,8 +98,64 @@ class MessageBubble extends StatelessWidget {
                       .toList(),
                 ),
               ),
+            if (!isUser && !message.isLoading && message.logId != null)
+              _FeedbackButtons(logId: message.logId!),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FeedbackButtons extends StatefulWidget {
+  const _FeedbackButtons({required this.logId});
+
+  final String logId;
+
+  @override
+  State<_FeedbackButtons> createState() => _FeedbackButtonsState();
+}
+
+class _FeedbackButtonsState extends State<_FeedbackButtons> {
+  String? _rating;
+
+  void _submit(String rating) {
+    final next = _rating == rating ? null : rating;
+    setState(() => _rating = next);
+    if (next != null) {
+      context.read<ApiService>().submitFeedback(widget.logId, next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, top: 2, bottom: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            iconSize: 18,
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              _rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
+              color: _rating == 'up' ? colorScheme.primary : colorScheme.outline,
+            ),
+            onPressed: () => _submit('up'),
+            tooltip: 'Helpful',
+          ),
+          IconButton(
+            iconSize: 18,
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              _rating == 'down' ? Icons.thumb_down : Icons.thumb_down_outlined,
+              color: _rating == 'down' ? colorScheme.error : colorScheme.outline,
+            ),
+            onPressed: () => _submit('down'),
+            tooltip: 'Not helpful',
+          ),
+        ],
       ),
     );
   }

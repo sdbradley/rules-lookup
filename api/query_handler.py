@@ -109,8 +109,8 @@ def _log_query_to_firestore(
     chunks: list[dict],
     answer: str,
     latency_ms: int,
-) -> None:
-    db.collection("query_logs").add({
+) -> str:
+    _, doc_ref = db.collection("query_logs").add({
         "uid": uid,
         "question": req.question,
         "governing_body": req.governing_body,
@@ -119,6 +119,7 @@ def _log_query_to_firestore(
         "latency_ms": latency_ms,
         "created_at": datetime.now(timezone.utc),
     })
+    return doc_ref.id
 
 
 def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
@@ -175,11 +176,13 @@ def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
     answer, input_tokens, output_tokens = generate(req.question, chunks)
     latency_ms = int((time.monotonic() - start) * 1000)
     _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
+    log_id = None
     if db is not None:
-        _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
+        log_id = _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
     return QueryResponse(
         answer=answer,
         sources=[chunk_to_source(c) for c in chunks],
+        log_id=log_id,
     )
 
 
@@ -216,8 +219,9 @@ def stream_query(
         latency_ms = int((time.monotonic() - start) * 1000)
         answer = "".join(full_answer)
         _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
+        log_id = None
         if db is not None:
-            _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
+            log_id = _log_query_to_firestore(db, uid, req, chunks, answer, latency_ms)
 
         sources = [chunk_to_source(c).model_dump() for c in chunks]
         if on_complete is not None:
@@ -226,6 +230,8 @@ def stream_query(
         done_payload: dict = {"type": "done", "sources": sources}
         if conversation_id is not None:
             done_payload["conversation_id"] = conversation_id
+        if log_id is not None:
+            done_payload["log_id"] = log_id
         yield f"data: {json.dumps(done_payload)}\n\n"
 
     return chunks, _generate()

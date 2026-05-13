@@ -16,7 +16,8 @@ from conversation import (
     get_messages,
     list_conversations,
 )
-from models import ConversationDetail, ConversationSummary, QueryRequest, QueryResponse, Source
+from feedback import write_feedback
+from models import ConversationDetail, ConversationSummary, FeedbackRequest, QueryRequest, QueryResponse, Source
 from query_handler import handle_query, stream_query
 from rate_limit import check_rate_limit
 from usage import get_monthly_count, increment_count, is_over_limit, is_subscriber
@@ -201,6 +202,21 @@ def conversation_detail(
         created_at=match["created_at"],
         messages=messages,
     )
+
+
+@app.post("/feedback", status_code=204)
+def submit_feedback(
+    req: FeedbackRequest,
+    authorization: str | None = Header(default=None),
+):
+    uid = verify_token(authorization)
+    db = get_db()
+    try:
+        write_feedback(db, uid, req.log_id, req.rating)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Access denied")
 
 
 @app.post("/webhooks/revenuecat")

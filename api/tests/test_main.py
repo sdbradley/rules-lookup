@@ -229,3 +229,47 @@ def test_query_uses_provided_conversation_id(mock_handle, mock_create_conv, mock
     assert response.status_code == 200
     mock_create_conv.assert_not_called()
     assert response.json()["conversation_id"] == "existing-conv-id"
+
+
+@patch("main.verify_token", return_value="uid-abc")
+@patch("main.write_feedback")
+def test_feedback_success(mock_write_feedback, mock_verify):
+    response = client.post(
+        "/feedback",
+        json={"log_id": "log-abc", "rating": "up"},
+        headers={"Authorization": "Bearer valid-token"},
+    )
+    assert response.status_code == 204
+    mock_write_feedback.assert_called_once_with(None, "uid-abc", "log-abc", "up")
+
+
+@patch("main.verify_token", return_value="uid-abc")
+@patch("main.write_feedback", side_effect=ValueError("Log entry log-abc not found"))
+def test_feedback_log_not_found(mock_write_feedback, mock_verify):
+    response = client.post(
+        "/feedback",
+        json={"log_id": "log-abc", "rating": "up"},
+        headers={"Authorization": "Bearer valid-token"},
+    )
+    assert response.status_code == 404
+
+
+@patch("main.verify_token", return_value="uid-abc")
+@patch("main.write_feedback", side_effect=PermissionError("Access denied"))
+def test_feedback_wrong_user(mock_write_feedback, mock_verify):
+    response = client.post(
+        "/feedback",
+        json={"log_id": "log-abc", "rating": "up"},
+        headers={"Authorization": "Bearer valid-token"},
+    )
+    assert response.status_code == 403
+
+
+@patch("main.verify_token", side_effect=__import__("fastapi").HTTPException(status_code=401, detail="Invalid token"))
+def test_feedback_unauthorized(mock_verify):
+    response = client.post(
+        "/feedback",
+        json={"log_id": "log-abc", "rating": "up"},
+        headers={"Authorization": "Bearer bad-token"},
+    )
+    assert response.status_code == 401
