@@ -331,3 +331,4 @@ Allow users to ask follow-up questions that carry context from previous turns in
 - [x] Phase 8: Free user hitting limit sees paywall; paid user does not
 - [x] Phase 9: Multi-body question correctly cites both sources
 - [x] Phase 11: Conversation created on first message; follow-up appends to same conversation; History screen shows past conversations; tapping one replays the thread; New Chat resets session
+- [x] Phase 12: Repeated question returns cached answer without hitting Pinecone or Claude; cache key is normalized correctly
