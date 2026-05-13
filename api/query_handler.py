@@ -183,7 +183,13 @@ def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
     )
 
 
-def stream_query(req: QueryRequest, uid: str = "", db=None, on_complete=None) -> tuple[list[dict], Generator[str, None, None]]:
+def stream_query(
+    req: QueryRequest,
+    uid: str = "",
+    db=None,
+    on_complete=None,
+    conversation_id: str | None = None,
+) -> tuple[list[dict], Generator[str, None, None]]:
     chunks = retrieve(req.question, req.governing_body)
     start = time.monotonic()
 
@@ -217,6 +223,9 @@ def stream_query(req: QueryRequest, uid: str = "", db=None, on_complete=None) ->
         if on_complete is not None:
             on_complete(answer, sources)
 
-        yield f"data: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+        done_payload: dict = {"type": "done", "sources": sources}
+        if conversation_id is not None:
+            done_payload["conversation_id"] = conversation_id
+        yield f"data: {json.dumps(done_payload)}\n\n"
 
     return chunks, _generate()

@@ -10,7 +10,13 @@ from fastapi.responses import StreamingResponse
 
 from auth import verify_token
 from cache import get_cached, normalize_key, write_cache
-from models import QueryRequest, QueryResponse, Source
+from conversation import (
+    append_message,
+    create_conversation,
+    get_messages,
+    list_conversations,
+)
+from models import ConversationDetail, ConversationSummary, QueryRequest, QueryResponse, Source
 from query_handler import handle_query, stream_query
 from rate_limit import check_rate_limit
 from usage import get_monthly_count, increment_count, is_over_limit, is_subscriber
@@ -45,6 +51,19 @@ def _check_limit(db, uid: str) -> None:
         raise HTTPException(status_code=429, detail="Monthly query limit reached")
 
 
+def _write_history(
+    db,
+    uid: str,
+    question: str,
+    governing_body: str | None,
+    answer: str,
+    sources: list[dict],
+    conversation_id: str,
+) -> None:
+    append_message(db, uid, conversation_id, "user", question)
+    append_message(db, uid, conversation_id, "assistant", answer, sources=sources)
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -60,13 +79,21 @@ def query(
     db = get_db()
     _check_limit(db, uid)
 
+    conv_id = req.conversation_id or create_conversation(db, uid, req.governing_body, req.question)
+
     cache_key = normalize_key(req.question, req.governing_body)
     cached = get_cached(db, cache_key)
     if cached:
         increment_count(db, uid)
+        threading.Thread(
+            target=_write_history,
+            args=(db, uid, req.question, req.governing_body, cached["answer"], cached["sources"], conv_id),
+            daemon=True,
+        ).start()
         return QueryResponse(
             answer=cached["answer"],
             sources=[Source(**s) for s in cached["sources"]],
+            conversation_id=conv_id,
         )
 
     try:
@@ -80,9 +107,18 @@ def query(
         args=(db, cache_key, req.question, req.governing_body, result.answer, sources_data),
         daemon=True,
     ).start()
+    threading.Thread(
+        target=_write_history,
+        args=(db, uid, req.question, req.governing_body, result.answer, sources_data, conv_id),
+        daemon=True,
+    ).start()
 
     increment_count(db, uid)
-    return result
+    return QueryResponse(
+        answer=result.answer,
+        sources=result.sources,
+        conversation_id=conv_id,
+    )
 
 
 @app.post("/query/stream")
@@ -95,14 +131,21 @@ def query_stream(
     db = get_db()
     _check_limit(db, uid)
 
+    conv_id = req.conversation_id or create_conversation(db, uid, req.governing_body, req.question)
+
     cache_key = normalize_key(req.question, req.governing_body)
     cached = get_cached(db, cache_key)
     if cached:
         increment_count(db, uid)
+        threading.Thread(
+            target=_write_history,
+            args=(db, uid, req.question, req.governing_body, cached["answer"], cached["sources"], conv_id),
+            daemon=True,
+        ).start()
 
         def _cached_stream():
             yield f"data: {json.dumps({'type': 'text', 'text': cached['answer']})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'sources': cached['sources']})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'sources': cached['sources'], 'conversation_id': conv_id})}\n\n"
 
         return StreamingResponse(
             _cached_stream(),
@@ -116,14 +159,47 @@ def query_stream(
             args=(db, cache_key, req.question, req.governing_body, answer, sources),
             daemon=True,
         ).start()
+        threading.Thread(
+            target=_write_history,
+            args=(db, uid, req.question, req.governing_body, answer, sources, conv_id),
+            daemon=True,
+        ).start()
 
-    _, generator = stream_query(req, uid=uid, db=db, on_complete=_on_complete)
+    _, generator = stream_query(req, uid=uid, db=db, on_complete=_on_complete, conversation_id=conv_id)
     increment_count(db, uid)
 
     return StreamingResponse(
         generator,
         media_type="text/event-stream",
         headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/conversations", response_model=list[ConversationSummary])
+def conversations(authorization: str | None = Header(default=None)):
+    uid = verify_token(authorization)
+    db = get_db()
+    return list_conversations(db, uid)
+
+
+@app.get("/conversations/{conversation_id}", response_model=ConversationDetail)
+def conversation_detail(
+    conversation_id: str,
+    authorization: str | None = Header(default=None),
+):
+    uid = verify_token(authorization)
+    db = get_db()
+    convs = list_conversations(db, uid)
+    match = next((c for c in convs if c["id"] == conversation_id), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    messages = get_messages(db, uid, conversation_id)
+    return ConversationDetail(
+        id=match["id"],
+        preview=match["preview"],
+        governing_body=match.get("governing_body"),
+        created_at=match["created_at"],
+        messages=messages,
     )
 
 
