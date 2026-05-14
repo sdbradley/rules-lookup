@@ -281,7 +281,7 @@ Sources: [rule_number — section (governing_body)]
 - Uses Flutter's `share_plus` package to invoke the native share sheet (covers iMessage, WhatsApp, copy to clipboard, etc.)
 - No backend changes required — share is constructed client-side from the answer and sources already in the chat
 
-### Phase 15 — Follow-up / Multi-Turn Chat
+### Phase 15 — Follow-up / Multi-Turn Chat ✅
 Allow users to ask follow-up questions that carry context from previous turns in the same session. "What about if the runner had already passed second base?" should not require re-typing the full scenario.
 
 **Approach:** Pass the conversation history as additional messages in the Claude API call. Retrieval is re-run on each turn using only the new question (not the full history) so the RAG results stay focused.
@@ -333,4 +333,5 @@ Allow users to ask follow-up questions that carry context from previous turns in
 - [x] Phase 11: Conversation created on first message; follow-up appends to same conversation; History screen shows past conversations; tapping one replays the thread; New Chat resets session
 - [x] Phase 12: Repeated question returns cached answer without hitting Pinecone or Claude; cache key is normalized correctly
 - [x] Phase 13: Thumbs up/down appear below completed assistant answers; tapping writes to query_logs; toggle works; wrong-user request returns 403
-- [x] Phase 14: Share button appears next to feedback buttons; tapping opens native share sheet with question, answer, sources, and "—via Rules Lookup" footer
+- [x] Phase 14: Share button appears next to feedback buttons; tapping opens native share sheet with question, answer, sources, and "—via RulesAI" footer
+- [x] Phase 15: Follow-up question carries context from prior turns; cache bypassed for multi-turn; standalone repeated question still hits cache
