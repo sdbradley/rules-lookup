@@ -58,6 +58,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _inputController.clear();
     FocusScope.of(context).unfocus();
+
+    final priorMessages = _messages
+        .where((m) => !m.isLoading && m.text.isNotEmpty)
+        .map((m) => {
+              'role': m.role == MessageRole.user ? 'user' : 'assistant',
+              'content': m.text,
+            })
+        .toList();
+
     setState(() {
       _isSending = true;
       _messages.add(Message(role: MessageRole.user, text: text));
@@ -71,6 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
             text,
             _selectedBody,
             conversationId: _conversationId,
+            messages: priorMessages.isNotEmpty ? priorMessages : null,
           );
       String accumulated = '';
 

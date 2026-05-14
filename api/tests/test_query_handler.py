@@ -84,7 +84,7 @@ def test_handle_query(mock_retrieve, mock_generate):
     assert len(response.sources) == 1
     assert response.sources[0].governing_body == "OBR"
     mock_retrieve.assert_called_once_with("What is interference?", "OBR")
-    mock_generate.assert_called_once_with("What is interference?", [SAMPLE_CHUNK])
+    mock_generate.assert_called_once_with("What is interference?", [SAMPLE_CHUNK], prior_messages=[])
 
 
 @patch("query_handler._get_index")
@@ -103,6 +103,9 @@ def test_retrieve_includes_vector_id(mock_embed, mock_get_index):
 
 def test_log_query_to_firestore():
     db = MagicMock()
+    doc_ref = MagicMock()
+    doc_ref.id = "log_doc_123"
+    db.collection.return_value.add.return_value = (None, doc_ref)
     req = QueryRequest(question="What is interference?", governing_body="OBR")
     chunks = [dict(SAMPLE_CHUNK, _id="vec_abc")]
 
@@ -121,6 +124,9 @@ def test_log_query_to_firestore():
 
 def test_log_query_to_firestore_omits_chunks_without_id():
     db = MagicMock()
+    doc_ref = MagicMock()
+    doc_ref.id = "log_doc_456"
+    db.collection.return_value.add.return_value = (None, doc_ref)
     req = QueryRequest(question="What is a balk?", governing_body=None)
     chunks = [SAMPLE_CHUNK]  # no _id field
 
@@ -130,7 +136,7 @@ def test_log_query_to_firestore_omits_chunks_without_id():
     assert written["chunk_ids"] == []
 
 
-@patch("query_handler._log_query_to_firestore")
+@patch("query_handler._log_query_to_firestore", return_value="log_doc_789")
 @patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
 @patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
 def test_handle_query_logs_to_firestore_when_db_provided(mock_retrieve, mock_generate, mock_log_fs):
@@ -177,3 +183,43 @@ def test_stream_query_calls_on_complete(mock_retrieve, mock_anthropic_cls):
     answer, sources = on_complete.call_args[0]
     assert answer == "The answer is yes."
     assert isinstance(sources, list)
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_passes_prior_messages_to_generate(mock_retrieve, mock_generate, mock_log_fs):
+    prior = [{"role": "user", "content": "What is a balk?"}, {"role": "assistant", "content": "A balk is..."}]
+    req = QueryRequest(question="What about lefties?", governing_body="OBR", messages=prior)
+    query_handler.handle_query(req)
+    call_kwargs = mock_generate.call_args[1]
+    assert call_kwargs.get("prior_messages") == prior
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_no_messages_passes_empty_list(mock_retrieve, mock_generate, mock_log_fs):
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    query_handler.handle_query(req)
+    call_kwargs = mock_generate.call_args[1]
+    assert call_kwargs.get("prior_messages") == []
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_bypasses_cache_when_messages_present(mock_retrieve, mock_generate, mock_log_fs):
+    prior = [{"role": "user", "content": "What is a balk?"}, {"role": "assistant", "content": "A balk is..."}]
+    req = QueryRequest(question="What about lefties?", governing_body="OBR", messages=prior)
+    result = query_handler.handle_query(req)
+    assert result.cache_bypass is True
+
+
+@patch("query_handler._log_query_to_firestore")
+@patch("query_handler.generate", return_value=("Here is the answer.", 100, 50))
+@patch("query_handler.retrieve", return_value=[SAMPLE_CHUNK])
+def test_handle_query_no_cache_bypass_without_messages(mock_retrieve, mock_generate, mock_log_fs):
+    req = QueryRequest(question="What is interference?", governing_body="OBR")
+    result = query_handler.handle_query(req)
+    assert result.cache_bypass is False

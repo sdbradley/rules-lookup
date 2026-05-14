@@ -146,7 +146,7 @@ class _AssistantActionsState extends State<_AssistantActions> {
       buf.write(widget.message.sources.map((s) => s.citation).join(', '));
     }
     buf.writeln();
-    buf.write('—via Rules Lookup');
+    buf.write('—via RulesAI');
     SharePlus.instance.share(ShareParams(text: buf.toString()));
   }
 
