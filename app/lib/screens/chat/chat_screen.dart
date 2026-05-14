@@ -170,8 +170,13 @@ class _ChatScreenState extends State<ChatScreen> {
                       controller: _scrollController,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       itemCount: _messages.length,
-                      itemBuilder: (_, i) =>
-                          MessageBubble(message: _messages[i]),
+                      itemBuilder: (_, i) {
+                        final msg = _messages[i];
+                        final question = msg.role == MessageRole.assistant && i > 0
+                            ? _messages[i - 1].text
+                            : null;
+                        return MessageBubble(message: msg, question: question);
+                      },
                     ),
             ),
           ),
