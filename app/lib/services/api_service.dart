@@ -53,10 +53,12 @@ class ApiService {
     String question,
     GoverningBody? governingBody, {
     String? conversationId,
+    List<Map<String, String>>? messages,
   }) async* {
     final body = <String, dynamic>{'question': question};
     if (governingBody != null) body['governing_body'] = governingBody.apiValue;
     if (conversationId != null) body['conversation_id'] = conversationId;
+    if (messages != null && messages.isNotEmpty) body['messages'] = messages;
 
     final request =
         http.Request('POST', Uri.parse('$_baseUrl/query/stream'));

@@ -145,13 +145,14 @@ def _log_query(uid: str, req: QueryRequest, chunks: list[dict], answer: str,
     }), flush=True)
 
 
-def generate(question: str, chunks: list[dict]) -> tuple[str, int, int]:
+def generate(question: str, chunks: list[dict], prior_messages: list[dict] | None = None) -> tuple[str, int, int]:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    messages = list(prior_messages or []) + [{"role": "user", "content": _build_prompt(question, chunks)}]
     response = client.messages.create(
         model=MODEL,
         max_tokens=1024,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": _build_prompt(question, chunks)}],
+        messages=messages,
     )
     return (
         response.content[0].text,
@@ -171,9 +172,10 @@ def chunk_to_source(chunk: dict) -> Source:
 
 
 def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
+    prior_messages = req.messages or []
     start = time.monotonic()
     chunks = retrieve(req.question, req.governing_body)
-    answer, input_tokens, output_tokens = generate(req.question, chunks)
+    answer, input_tokens, output_tokens = generate(req.question, chunks, prior_messages=prior_messages)
     latency_ms = int((time.monotonic() - start) * 1000)
     _log_query(uid, req, chunks, answer, input_tokens, output_tokens, latency_ms)
     log_id = None
@@ -183,6 +185,7 @@ def handle_query(req: QueryRequest, uid: str = "", db=None) -> QueryResponse:
         answer=answer,
         sources=[chunk_to_source(c) for c in chunks],
         log_id=log_id,
+        cache_bypass=bool(prior_messages),
     )
 
 
@@ -196,17 +199,20 @@ def stream_query(
     chunks = retrieve(req.question, req.governing_body)
     start = time.monotonic()
 
+    prior_messages = req.messages or []
+
     def _generate() -> Generator[str, None, None]:
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         full_answer = []
         input_tokens = 0
         output_tokens = 0
+        messages = list(prior_messages) + [{"role": "user", "content": _build_prompt(req.question, chunks)}]
 
         with client.messages.stream(
             model=MODEL,
             max_tokens=1024,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": _build_prompt(req.question, chunks)}],
+            messages=messages,
         ) as stream:
             for text in stream.text_stream:
                 full_answer.append(text)

@@ -83,7 +83,7 @@ def query(
     conv_id = req.conversation_id or create_conversation(db, uid, req.governing_body, req.question)
 
     cache_key = normalize_key(req.question, req.governing_body)
-    cached = get_cached(db, cache_key)
+    cached = None if req.messages else get_cached(db, cache_key)
     if cached:
         increment_count(db, uid)
         threading.Thread(
@@ -135,7 +135,7 @@ def query_stream(
     conv_id = req.conversation_id or create_conversation(db, uid, req.governing_body, req.question)
 
     cache_key = normalize_key(req.question, req.governing_body)
-    cached = get_cached(db, cache_key)
+    cached = None if req.messages else get_cached(db, cache_key)
     if cached:
         increment_count(db, uid)
         threading.Thread(

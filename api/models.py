@@ -7,6 +7,7 @@ class QueryRequest(BaseModel):
     question: str
     governing_body: str | None = None
     conversation_id: str | None = None
+    messages: list[dict] | None = None
 
 
 class Source(BaseModel):
@@ -37,6 +38,7 @@ class QueryResponse(BaseModel):
     sources: list[Source]
     conversation_id: str | None = None
     log_id: str | None = None
+    cache_bypass: bool = False
 
 
 class FeedbackRequest(BaseModel):
