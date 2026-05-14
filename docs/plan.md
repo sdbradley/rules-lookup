@@ -79,7 +79,7 @@ Local dev flow:
 
 ## Build Phases
 
-### Phase 0 — Project Scaffolding + Docker Setup
+### Phase 0 — Project Scaffolding + Docker Setup ✅
 - Create repo with the following structure:
   ```
   /
