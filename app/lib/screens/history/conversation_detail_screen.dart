@@ -56,14 +56,17 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
             itemCount: conv.messages.length,
             itemBuilder: (_, i) {
               final msg = conv.messages[i];
+              final isAssistant = msg.role == 'assistant';
+              final question = isAssistant && i > 0
+                  ? conv.messages[i - 1].content
+                  : null;
               return MessageBubble(
                 message: Message(
-                  role: msg.role == 'user'
-                      ? MessageRole.user
-                      : MessageRole.assistant,
+                  role: isAssistant ? MessageRole.assistant : MessageRole.user,
                   text: msg.content,
                   sources: msg.sources,
                 ),
+                question: question,
               );
             },
           );

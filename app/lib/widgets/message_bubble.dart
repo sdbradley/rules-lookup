@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/message.dart';
 import '../services/api_service.dart';
 
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({super.key, required this.message});
+  const MessageBubble({super.key, required this.message, this.question});
 
   final Message message;
+  final String? question;
 
   @override
   Widget build(BuildContext context) {
@@ -98,8 +100,11 @@ class MessageBubble extends StatelessWidget {
                       .toList(),
                 ),
               ),
-            if (!isUser && !message.isLoading && message.logId != null)
-              _FeedbackButtons(logId: message.logId!),
+            if (!isUser && !message.isLoading)
+              _AssistantActions(
+                message: message,
+                question: question,
+              ),
           ],
         ),
       ),
@@ -107,53 +112,86 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-class _FeedbackButtons extends StatefulWidget {
-  const _FeedbackButtons({required this.logId});
+class _AssistantActions extends StatefulWidget {
+  const _AssistantActions({required this.message, this.question});
 
-  final String logId;
+  final Message message;
+  final String? question;
 
   @override
-  State<_FeedbackButtons> createState() => _FeedbackButtonsState();
+  State<_AssistantActions> createState() => _AssistantActionsState();
 }
 
-class _FeedbackButtonsState extends State<_FeedbackButtons> {
+class _AssistantActionsState extends State<_AssistantActions> {
   String? _rating;
 
-  void _submit(String rating) {
+  void _submitFeedback(String rating) {
     final next = _rating == rating ? null : rating;
     setState(() => _rating = next);
-    if (next != null) {
-      context.read<ApiService>().submitFeedback(widget.logId, next);
+    if (next != null && widget.message.logId != null) {
+      context.read<ApiService>().submitFeedback(widget.message.logId!, next);
     }
+  }
+
+  void _share() {
+    final buf = StringBuffer();
+    if (widget.question != null) {
+      buf.writeln(widget.question);
+      buf.writeln();
+    }
+    buf.writeln(widget.message.text);
+    if (widget.message.sources.isNotEmpty) {
+      buf.writeln();
+      buf.write('Sources: ');
+      buf.write(widget.message.sources.map((s) => s.citation).join(', '));
+    }
+    buf.writeln();
+    buf.write('—via Rules Lookup');
+    SharePlus.instance.share(ShareParams(text: buf.toString()));
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(left: 12, top: 2, bottom: 4),
+      padding: const EdgeInsets.only(left: 4, top: 2, bottom: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (widget.message.logId != null) ...[
+            IconButton(
+              iconSize: 18,
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                _rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
+                color: _rating == 'up'
+                    ? colorScheme.primary
+                    : colorScheme.outline,
+              ),
+              onPressed: () => _submitFeedback('up'),
+              tooltip: 'Helpful',
+            ),
+            IconButton(
+              iconSize: 18,
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                _rating == 'down'
+                    ? Icons.thumb_down
+                    : Icons.thumb_down_outlined,
+                color: _rating == 'down'
+                    ? colorScheme.error
+                    : colorScheme.outline,
+              ),
+              onPressed: () => _submitFeedback('down'),
+              tooltip: 'Not helpful',
+            ),
+          ],
           IconButton(
             iconSize: 18,
             visualDensity: VisualDensity.compact,
-            icon: Icon(
-              _rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
-              color: _rating == 'up' ? colorScheme.primary : colorScheme.outline,
-            ),
-            onPressed: () => _submit('up'),
-            tooltip: 'Helpful',
-          ),
-          IconButton(
-            iconSize: 18,
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              _rating == 'down' ? Icons.thumb_down : Icons.thumb_down_outlined,
-              color: _rating == 'down' ? colorScheme.error : colorScheme.outline,
-            ),
-            onPressed: () => _submit('down'),
-            tooltip: 'Not helpful',
+            icon: Icon(Icons.ios_share_outlined, color: colorScheme.outline),
+            onPressed: _share,
+            tooltip: 'Share',
           ),
         ],
       ),
